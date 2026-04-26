@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Birthday Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Marck+Script&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #050505; overflow: hidden; font-family: Arial, sans-serif; color: #111; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+    #stars { z-index: 0; }
+    #matrix { z-index: 1; }
+    #fx { z-index: 2; }
+
+    #gif-wrap {
+      position: fixed; inset: 0; z-index: 20;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.85);
+    }
+    #gif-wrap img { max-width: 80vw; max-height: 60vh; border-radius: 18px; box-shadow: 0 0 30px rgba(255,105,180,.35); }
+
+    #scene {
+      position: fixed; inset: 0; z-index: 30;
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 30px;
+      transition: opacity 2s ease;
+    }
+
+    #messageBox {
+      width: min(1000px, 95vw); min-height: 160px;
+      background: rgba(255,255,255,.98); border: 2px solid #d4af37;
+      border-radius: 30px; box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      padding: 30px 50px; opacity: 0; transform: translateY(-20px);
+      transition: opacity .4s ease, transform .4s ease; text-align: center; 
+      z-index: 1000;
+      position: relative;
+    }
+    #messageBox.show { opacity: 1; transform: translateY(0); }
+    
+    #messageText {
+      white-space: normal; line-height: 1.2; text-align: center;
+      font-family: 'Marck Script', cursive; font-size: clamp(26px, 5.2vw, 64px); 
+      color: #ff85c1; -webkit-text-stroke: 1.2px black; text-shadow: 2px 2px 5px rgba(0,0,0,0.15);
+    }
+    
+    #messageText.typing::after { content: '|'; margin-left: 3px; color: #ff69b4; animation: blink .55s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .book-wrap { perspective: 3200px; transition: opacity 2s ease; z-index: 150; }
+    .book { position: relative; width: 380px; height: 470px; transition: width 1s ease; }
+    .book.opened { width: 760px; }
+    .left-sheet {
+      position: absolute; left: 0; top: 0; width: 380px; height: 470px;
+      border-radius: 18px 0 0 18px; overflow: hidden; background: #fff;
+      box-shadow: inset -3px 0 20px rgba(0,0,0,.12), 0 14px 30px rgba(0,0,0,.28);
+      z-index: 1; opacity: 0; transition: opacity 0.5s ease;
+    }
+    .left-sheet img { width: 100%; height: 100%; object-fit: cover; }
+    .book.opened .left-sheet { opacity: 1; }
+    
+    .page {
+      position: absolute; top: 0; left: 0; width: 380px; height: 470px;
+      transform-origin: left; transform-style: preserve-3d;
+      transition: transform 1.2s cubic-bezier(.645,.045,.355,1), left 1.2s cubic-bezier(.645,.045,.355,1);
+      cursor: pointer;
+    }
+    .book.opened .page { left: 380px; }
+    .page.flipped { transform: rotateY(-180deg); }
+    
+    .face { position: absolute; inset: 0; backface-visibility: hidden; overflow: hidden; border-radius: 0 18px 18px 0; background: #fff; }
+    .face img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .back { transform: rotateY(180deg); border-radius: 18px 0 0 18px; }
+    
+    .p1 { z-index: 7; } .p2 { z-index: 6; } .p3 { z-index: 5; } .p4 { z-index: 4; } .p5 { z-index: 3; } .p6 { z-index: 10; }
+
+    #final-container {
+      position: fixed; inset: 0; z-index: 1500;
+      display: none; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    #final-heart { position: relative; width: 100vw; height: 100vh; }
+    .heart-photo {
+      position: absolute; width: 100px; height: 100px;
+      border: 3px solid white; border-radius: 10px;
+      object-fit: cover; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      transition: all 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <canvas id="matrix"></canvas>
+  <canvas id="fx"></canvas>
+
+  <div id="gif-wrap">
+    <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJueXF4eXJueXF4eXJueXF4eXJueXF4eXJueXF4eXJueXF4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9iZCZjdD1n/MDJ9IbxxvDUQM/giphy.gif" alt="gif" />
+  </div>
+
+  <div id="scene">
+    <div id="messageBox"><div id="messageText"></div></div>
+    <div class="book-wrap" id="bookContainer">
+      <div class="book" id="mainBook">
+        <div class="left-sheet" id="leftSheet"><img src="https://i.ibb.co/vCctzgF1/photo-2026-04-26-02-33-56.jpg"></div>
+        
+        <div class="page p6" data-page="0">
+            <div class="face front"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+            <div class="face back"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+        </div>
+        <div class="page p5" data-page="1">
+            <div class="face front"><img src="https://i.ibb.co/Fbm715HH/photo-2.jpg"></div>
+            <div class="face back"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+        </div>
+        <div class="page p4" data-page="2">
+            <div class="face front"><img src="https://i.ibb.co/XxYvxRsV/photo-3.jpg"></div>
+            <div class="face back"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+        </div>
+        <div class="page p3" data-page="3">
+            <div class="face front"><img src="https://i.ibb.co/YFVRT3zD/photo-4.jpg"></div>
+            <div class="face back"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+        </div>
+        <div class="page p2" data-page="4">
+            <div class="face front"><img src="https://i.ibb.co/7xhnPdNK/photo-5.jpg"></div>
+            <div class="face back"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+        </div>
+        <div class="page p1" data-page="5">
+            <div class="face front"><img src="https://i.ibb.co/tRJp7sr/photo-6.jpg"></div>
+            <div class="face back"><img src="https://i.ibb.co/YFBxNbWJ/photo-1.jpg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="final-container"><div id="final-heart"></div></div>
+
+  <script>
+    const finalHeartPhotos = [
+      'https://i.ibb.co/wF863JdZ/photo-1.jpg', 'https://i.ibb.co/7JLzbtmQ/photo-2.jpg',
+      'https://i.ibb.co/B2nMYhPG/photo-3.jpg', 'https://i.ibb.co/4gKRHSBq/photo-4.jpg',
+      'https://i.ibb.co/TD5L1zXB/photo-5.jpg', 'https://i.ibb.co/PGhcbtRt/photo-6.jpg',
+      'https://i.ibb.co/JF8fBW2R/photo-7.jpg', 'https://i.ibb.co/JRZhqRXd/photo-8.jpg',
+      'https://i.ibb.co/tRJp7sr/photo-9.jpg', 'https://i.ibb.co/gMT6j0H2/photo-10.jpg',
+      'https://i.ibb.co/vCctzgF1/photo-11.jpg'
+    ];
+
+    const starsC = document.getElementById('stars'), starsX = starsC.getContext('2d');
+    const matrixC = document.getElementById('matrix'), matrixX = matrixC.getContext('2d');
+    const fxC = document.getElementById('fx'), fxX = fxC.getContext('2d');
+    const gif = document.getElementById('gif-wrap'), scene = document.getElementById('scene');
+    const leftSheet = document.getElementById('leftSheet'), messageBox = document.getElementById('messageBox');
+    const messageText = document.getElementById('messageText'), mainBook = document.getElementById('mainBook');
+    const pages = [...document.querySelectorAll('.page')];
+
+    const messages = ['Бажаю всього найкращого в житті', 'Дякую', 'Наша дружба триває вже 12 років', 'Ти самий найкращій друг в моєму житті', 'Шоб здав усі екзамени і перейшов на 2-гий курс', 'Xyй'];
+
+    let w, h, stars = [], pts = [], exploding = false, drops = [];
+
+    function resize() {
+      w = starsC.width = matrixC.width = fxC.width = innerWidth;
+      h = starsC.height = matrixC.height = fxC.height = innerHeight;
+      stars = Array.from({length: 180}, () => ({ x: Math.random()*w, y: Math.random()*h, s: Math.random()*2, v: Math.random()*0.45 }));
+      drops = Array(Math.floor(w/20)).fill(1);
+    }
+    addEventListener('resize', resize); resize();
+
+    function drawStars() {
+      starsX.clearRect(0,0,w,h); starsX.fillStyle = '#fff';
+      for (const s of stars) { starsX.beginPath(); starsX.arc(s.x,s.y,s.s,0,Math.PI*2); starsX.fill(); s.y += s.v; if (s.y > h) s.y = 0; }
+      requestAnimationFrame(drawStars);
+    }
+
+    function drawMatrix() {
+      matrixX.fillStyle = 'rgba(0,0,0,.1)'; matrixX.fillRect(0,0,w,h);
+      matrixX.fillStyle = 'rgba(255,105,180,.45)'; matrixX.font = '15px monospace';
+      drops.forEach((y, i) => { matrixX.fillText(Math.random() > .5 ? '1' : '0', i * 20, y * 20); if (y * 20 > h && Math.random() > .98) drops[i] = 0; drops[i]++; });
+    }
+    let mInt = setInterval(drawMatrix, 50);
+
+    class P {
+      constructor(x,y){ this.x=Math.random()*w; this.y=Math.random()*h; this.tx=x; this.ty=y; this.vx=0; this.vy=0; }
+      upd(){
+        if(!exploding){ this.x+=(this.tx-this.x)*.15; this.y+=(this.ty-this.y)*.15; }
+        else { if(this.vx===0){ this.vx=(Math.random()-.5)*50; this.vy=(Math.random()-.5)*50; } this.x+=this.vx; this.y+=this.vy; this.vx*=.95; this.vy*=.95; }
+      }
+      dr(){ fxX.fillStyle='#ff69b4'; fxX.fillRect(this.x,this.y,4,4); }
+    }
+    function setTxt(txt, sz){
+      const c=document.createElement('canvas'), x=c.getContext('2d'); c.width=w; c.height=h;
+      x.fillStyle='#fff'; x.font='bold '+sz+' Arial Black'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(txt,w/2,h/2);
+      const d=x.getImageData(0,0,w,h).data; pts=[];
+      for(let y=0;y<h;y+=7) for(let x2=0;x2<w;x2+=7) if(d[(y*w+x2)*4]>128) pts.push(new P(x2,y));
+    }
+    function setHeart(){
+      pts=[]; for(let t=0;t<Math.PI*2;t+=.02){
+        const x=16*Math.pow(Math.sin(t),3)*13+w/2, y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*13+h/2;
+        for(let i=0;i<5;i++) pts.push(new P(x+(Math.random()-.5)*10,y+(Math.random()-.5)*10));
+      }
+    }
+    function anim(){ fxX.clearRect(0,0,w,h); pts.forEach(p=>{p.upd();p.dr();}); requestAnimationFrame(anim); }
+    anim();
+
+    const wait = ms => new Promise(r=>setTimeout(r,ms));
+    async function stage(t,s,d,heart=false){ exploding=false; heart?setHeart():setTxt(t,s); await wait(d); exploding=true; await wait(550); }
+
+    async function typeMessage(next) {
+      const prev = messageText.textContent;
+      if (prev) { for (let i = prev.length; i >= 0; i--) { messageText.textContent = prev.slice(0, i); await wait(10); } }
+      messageText.textContent = ''; messageText.classList.add('typing');
+      for (let i = 0; i < next.length; i++) { messageText.textContent += next[i]; await wait(16); }
+      messageText.classList.remove('typing');
+    }
+
+    pages.forEach(page => {
+      page.addEventListener('click', async () => {
+        if (page.classList.contains('flipped')) return;
+        const idx = +page.dataset.page;
+        if (idx === 0) { mainBook.classList.add('opened'); await wait(100); messageBox.classList.add('show'); }
+        page.classList.add('flipped');
+        
+        const img = page.querySelector('.front img');
+        if (img) leftSheet.innerHTML = `<img src="${img.src}">`;
+        
+        const msg = messages[idx]; if (msg) await typeMessage(msg);
+        
+        // Перехід до серця ТІЛЬКИ ПІСЛЯ останньої сторінки через 15 СЕКУНД
+        if (idx === 5) { 
+           setTimeout(() => {
+              scene.style.opacity = '0';
+              setTimeout(() => {
+                 scene.style.display = 'none';
+                 showFinalHeart(); 
+              }, 2000);
+           }, 15000); // 15000 мілісекунд = 15 секунд
+        }
+      });
+    });
+
+    function showFinalHeart() {
+      const container = document.getElementById('final-container');
+      const heartDiv = document.getElementById('final-heart');
+      container.style.display = 'flex';
+      const count = 45; const scale = 28; 
+      for (let i = 0; i < count; i++) {
+        const img = document.createElement('img');
+        img.src = finalHeartPhotos[i % finalHeartPhotos.length];
+        img.classList.add('heart-photo');
+        img.style.left = '50%'; img.style.top = '50%';
+        img.style.transform = 'translate(-50%, -50%) scale(0)';
+        heartDiv.appendChild(img);
+        setTimeout(() => {
+          const t = (i / count) * Math.PI * 2;
+          const x = 16 * Math.pow(Math.sin(t), 3);
+          const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+          const posX = (window.innerWidth / 2) + (x * scale);
+          const posY = (window.innerHeight / 2) + (y * scale);
+          img.style.left = `${posX}px`; img.style.top = `${posY}px`;
+          img.style.transform = `translate(-50%, -50%) scale(1) rotate(${Math.random() * 30 - 15}deg)`;
+        }, i * 65);
+      }
+    }
+
+    async function init() {
+      for (let i=3;i>=1;i--) await stage(String(i),'30vh',700);
+      await stage('З ДНЕМ','12vw',900); await stage('НАРОДЖЕННЯ','10vw',900);
+      await stage('ОЛУХ','15vw',1000); await stage('', '', 1500, true);
+      pts=[]; clearInterval(mInt); matrixC.style.opacity='0'; drawStars();
+      await wait(450); gif.style.display='flex'; await wait(3400);
+      gif.style.display='none'; scene.style.display='flex';
+    }
+    init();
+  </script>
+</body>
+</html>
